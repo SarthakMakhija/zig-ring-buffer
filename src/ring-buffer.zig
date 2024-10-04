@@ -1,6 +1,6 @@
 const std = @import("std");
 
-/// A Fixed size ring-buffer which wraps the type T.
+/// A Fixed size ring-buffer which stores the elements of type T in contiguous locations in memory.
 /// The implementation falls back to index 0 if the index reaches the last possible index in the available slice.
 /// RingBuffer can be used with multiple threads.
 fn RingBuffer(comptime T: type) type {
@@ -21,14 +21,15 @@ fn RingBuffer(comptime T: type) type {
 
         /// Add the given element to the RingBuffer.
         /// The `add` implementation falls back to index 0 if the index reaches the last possible index in the available slice.
-        /// The `add` involves the following:
-        /// Loading the existing value of index. This operation can not use `relaxed/unordered`memory ordering. Because,
+        /// It involves the following:
+        /// 1). Loading the existing value of index. This operation can not use `relaxed/unordered`memory ordering. Because,
         /// `relaxed` gives no guarantee on what value of `index` the reading thread will see.
         /// It needs to be stronger than `relaxed/unordered`.
-        /// Using `acquire` forms a happens before relationship with the store operation done using `release`.
+        ///
+        /// 2). Using `acquire` forms a happens before relationship with the store operation done using `release`.
         /// `cmpxchgWeak` needs to provide two orderings: success and failure.
-        /// In success ordering, we need to pass `acq_rel` as we need to establish a happens before relationship with the thread that does the store with `release` ordering,
-        /// because we are using the exisiting value (/index).
+        /// In success ordering, we need to pass `acq_rel` as it is required establish a happens before relationship with the
+        /// thread that does the store with `release` ordering, because we are using the `existing_index` value.
         /// In Zig, the failure ordering has to be either `monotonic` or `seq_cst`.
         fn add(self: *RingBuffer(T), element: T) void {
             var existing_index = self.index.load(.acquire);
@@ -38,7 +39,7 @@ fn RingBuffer(comptime T: type) type {
             self.elements[existing_index] = element;
         }
 
-        /// Returns a type Sorted which represents the RingBuffer elements in sorted order.
+        /// Returns the Sorted type which represents the RingBuffer elements in sorted order.
         /// The sorting order of the elements is determined by the `lessThanFn`.
         /// This is used in unit-tests only.
         fn sorted(self: RingBuffer(T), comptime lessThanFn: fn (lhs: T, rhs: T) bool) !Sorted(T) {
@@ -54,7 +55,7 @@ fn RingBuffer(comptime T: type) type {
 
                 /// Initialize the Sorted type.
                 /// It uses the allocator of type `std.mem.Allocator` to allocate the memory for the backing array
-                /// which sorts the sorted elements.
+                /// which stores the sorted elements.
                 fn init(allocator: std.mem.Allocator, buffer: RingBuffer(V), comptime lessThanFn: fn (lhs: V, rhs: V) bool) !Sorted(V) {
                     const elements = try allocator.alloc(V, buffer.elements.len);
                     @memcpy(elements, buffer.elements);
