@@ -1,11 +1,16 @@
 const std = @import("std");
 
+/// A Fixed size ring-buffer which wraps the type T.
+/// The implementation falls back to index 0 if the index reaches the last possible index in the available slice.
+/// RingBuffer can be used with multiple threads.
 fn RingBuffer(comptime T: type) type {
     return struct {
         index: std.atomic.Value(usize),
         elements: []T,
         allocator: std.mem.Allocator,
 
+        /// Initialize RingBuffer with the given capacity. It uses the allocator of type `std.mem.Allocator`
+        /// to allocate the memory for the backing array.
         fn init(allocator: std.mem.Allocator, capacity: usize) !RingBuffer(T) {
             return .{
                 .index = std.atomic.Value(usize).init(0),
@@ -14,6 +19,8 @@ fn RingBuffer(comptime T: type) type {
             };
         }
 
+        /// Add the given element to the RingBuffer.
+        /// The `add` implementation falls back to index 0 if the index reaches the last possible index in the available slice.
         fn add(self: *RingBuffer(T), element: T) void {
             var existing_index = self.index.load(.acquire);
             while (self.index.cmpxchgWeak(existing_index, @mod((existing_index + 1), self.elements.len), .acq_rel, .monotonic)) |existing| {
@@ -22,15 +29,23 @@ fn RingBuffer(comptime T: type) type {
             self.elements[existing_index] = element;
         }
 
+        /// Returns a type Sorted which represents the RingBuffer elements in sorted order.
+        /// The sorting order of the elements is determined by the `lessThanFn`.
+        /// This is used in unit-tests only.
         fn sorted(self: RingBuffer(T), comptime lessThanFn: fn (lhs: T, rhs: T) bool) !Sorted(T) {
             return Sorted(T).init(self.allocator, self, lessThanFn);
         }
 
+        /// Contains all the elements of the RingBuffer in the sorted order.
+        /// This is used in unit-tests only.
         fn Sorted(comptime V: type) type {
             return struct {
                 elements: []V,
                 allocator: std.mem.Allocator,
 
+                /// Initialize the Sorted type.
+                /// It uses the allocator of type `std.mem.Allocator` to allocate the memory for the backing array
+                /// which sorts the sorted elements.
                 fn init(allocator: std.mem.Allocator, buffer: RingBuffer(V), comptime lessThanFn: fn (lhs: V, rhs: V) bool) !Sorted(V) {
                     const elements = try allocator.alloc(V, buffer.elements.len);
                     @memcpy(elements, buffer.elements);
@@ -47,12 +62,14 @@ fn RingBuffer(comptime T: type) type {
                     };
                 }
 
+                /// Release the memory allocated to hold the sorted elements.
                 fn deinit(self: Sorted(V)) void {
                     self.allocator.free(self.elements);
                 }
             };
         }
 
+        /// Release the memory allocated to hold the ring buffer elements.
         fn deinit(self: RingBuffer(T)) void {
             self.allocator.free(self.elements);
         }
