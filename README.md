@@ -1,4 +1,4 @@
-# zing-ring-buffer
+# zig-ring-buffer
 
 [![Build](https://github.com/SarthakMakhija/zing-ring-buffer/actions/workflows/build.yml/badge.svg)](https://github.com/SarthakMakhija/zing-ring-buffer/actions/workflows/build.yml)
 
