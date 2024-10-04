@@ -21,6 +21,15 @@ fn RingBuffer(comptime T: type) type {
 
         /// Add the given element to the RingBuffer.
         /// The `add` implementation falls back to index 0 if the index reaches the last possible index in the available slice.
+        /// The `add` involves the following:
+        /// Loading the existing value of index. This operation can not use `relaxed/unordered`memory ordering. Because,
+        /// `relaxed` gives no guarantee on what value of `index` the reading thread will see.
+        /// It needs to be stronger than `relaxed/unordered`.
+        /// Using `acquire` forms a happens before relationship with the store operation done using `release`.
+        /// `cmpxchgWeak` needs to provide two orderings: success and failure.
+        /// In success ordering, we need to pass `acq_rel` as we need to establish a happens before relationship with the thread that does the store with `release` ordering,
+        /// because we are using the exisiting value (/index).
+        /// In Zig, the failure ordering has to be either `monotonic` or `seq_cst`.
         fn add(self: *RingBuffer(T), element: T) void {
             var existing_index = self.index.load(.acquire);
             while (self.index.cmpxchgWeak(existing_index, @mod((existing_index + 1), self.elements.len), .acq_rel, .monotonic)) |existing| {
