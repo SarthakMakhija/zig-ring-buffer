@@ -16,5 +16,5 @@ It demonstrates language concepts including:
 - Error handling
 - Generics (`comptime`)
 - Unit tests
-- Threadpool in tests
+- Thread-pool in tests
 - Waiting group in tests
