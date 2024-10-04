@@ -4,7 +4,7 @@
 
 Tiny concurrent RingBuffer in Zig to understand atomics and memory ordering.
 
-It demonstrates language concepts including:
+It demonstrates various language concepts:
 
 - Memory ordering
 - Compare and exchange operation
