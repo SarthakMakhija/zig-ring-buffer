@@ -95,10 +95,8 @@ test "adds elements to RingBuffer within its capacity and in a single thread" {
     buffer.add(30);
     buffer.add(40);
 
-    try std.testing.expectEqual(10, buffer.elements[0]);
-    try std.testing.expectEqual(20, buffer.elements[1]);
-    try std.testing.expectEqual(30, buffer.elements[2]);
-    try std.testing.expectEqual(40, buffer.elements[3]);
+    const expected = [_]i32{ 10, 20, 30, 40 };
+    try std.testing.expectEqualSlices(i32, &expected, buffer.elements);
 }
 
 test "adds elements to RingBuffer beyond its capacity and in a single thread" {
@@ -111,10 +109,8 @@ test "adds elements to RingBuffer beyond its capacity and in a single thread" {
     buffer.add(40);
     buffer.add(50);
 
-    try std.testing.expectEqual(50, buffer.elements[0]);
-    try std.testing.expectEqual(20, buffer.elements[1]);
-    try std.testing.expectEqual(30, buffer.elements[2]);
-    try std.testing.expectEqual(40, buffer.elements[3]);
+    const expected = [_]i32{ 50, 20, 30, 40 };
+    try std.testing.expectEqualSlices(i32, &expected, buffer.elements);
 }
 
 test "adds elements to RingBuffer within its capacity and in multiple threads" {
@@ -187,14 +183,14 @@ test "adds elements to RingBuffer beyond its capacity and in multiple (20) threa
     }.lessThan);
     defer sorted.deinit();
 
-    var count_by_element = std.AutoHashMap(i32, usize).init(std.testing.allocator);
-    defer count_by_element.deinit();
+    var element_frequency = std.AutoHashMap(i32, usize).init(std.testing.allocator);
+    defer element_frequency.deinit();
 
     for (sorted.elements) |element| {
-        if (count_by_element.get(element)) |_| {
+        if (element_frequency.get(element)) |_| {
             try std.testing.expect(false);
         } else {
-            try count_by_element.put(element, 1);
+            try element_frequency.put(element, 1);
         }
     }
 }
@@ -232,14 +228,14 @@ test "adds elements to RingBuffer beyond its capacity and in multiple (100) thre
     }.lessThan);
     defer sorted.deinit();
 
-    var count_by_element = std.AutoHashMap(i32, usize).init(std.testing.allocator);
-    defer count_by_element.deinit();
+    var element_frequency = std.AutoHashMap(i32, usize).init(std.testing.allocator);
+    defer element_frequency.deinit();
 
     for (sorted.elements) |element| {
-        if (count_by_element.get(element)) |_| {
+        if (element_frequency.get(element)) |_| {
             try std.testing.expect(false);
         } else {
-            try count_by_element.put(element, 1);
+            try element_frequency.put(element, 1);
         }
     }
 }
